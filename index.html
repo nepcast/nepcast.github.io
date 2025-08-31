@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NepCast | Hyperlocal Weather for Nepal</title>
+  <meta name="description" content="NepCast – hyperlocal weather services for Nepal: forecasts, alerts, sector advisories, and an open API." />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <style>
+    /* ------------------------------
+       NepCast — Minimal, clean, no overflow
+       Notes: No JS. Accessible. Print-friendly.
+    -------------------------------*/
+    *,*::before,*::after{box-sizing:border-box}
+    html{font-size:16px}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial,sans-serif;line-height:1.6;color:#1b2430;background:#ffffff;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+    img,svg{max-width:100%;height:auto}
+    a{color:#0b6bd3;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    :root{
+      --maxw: 980px;
+      --muted:#5c6b7a;
+      --border:#e5eaf0;
+      --card:#ffffff;
+      --accent:#0b6bd3;
+      --accent-2:#e86c2a;
+      --radius:14px;
+      --shadow:0 1px 2px rgba(16,24,40,.04), 0 4px 10px rgba(16,24,40,.06);
+    }
+
+    .container{max-width:var(--maxw);margin:0 auto;padding:0 16px}
+    header{border-bottom:1px solid var(--border);background:#fff}
+    nav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.2px}
+    .brand .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0b6bd3,#5bb3ff);display:inline-block}
+    .nav-links{display:flex;gap:10px;flex-wrap:wrap}
+    .nav-links a{padding:6px 10px;border-radius:8px;color:var(--muted)}
+    .nav-links a:hover{background:#f7f9fc;color:#0f1720;text-decoration:none}
+
+    main{overflow-x:hidden}
+
+    .hero{padding:36px 0}
+    .hero h1{margin:0 0 8px;font-size:clamp(24px,4vw,38px);line-height:1.2}
+    .strap{color:var(--muted);max-width:70ch}
+    .cta{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+    .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:#0f1720;font-weight:600}
+    .btn.primary{background:#0b6bd3;border-color:#0b6bd3;color:#fff}
+    .btn.secondary{background:#e86c2a;border-color:#e86c2a;color:#fff}
+
+    .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
+    .kpi{background:#f7f9fc;border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center}
+    .kpi .n{font-size:20px;font-weight:800}
+    .kpi .l{font-size:12px;color:var(--muted)}
+
+    .section{padding:32px 0}
+    .section .hd-ln{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+    .section h2{margin:0;font-size:22px}
+    .muted{color:var(--muted)}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .bd{padding:14px}
+
+    /* Alerts */
+    .alert{padding:0;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+    .alert summary{list-style:none;padding:14px;cursor:pointer}
+    .alert summary::-webkit-details-marker{display:none}
+    .alert .inner{padding:0 14px 14px}
+
+    /* Forecast grid — auto-fit to avoid overflow */
+    .wx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .wx-card .city{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+    .wx-card .city h3{margin:0;font-size:16px}
+    .wx-card .temp{font-size:28px;font-weight:800}
+    .wx-card .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+    .wx-card .meta .m{background:#f7f9fc;border:1px solid var(--border);border-radius:8px;padding:6px;text-align:center;font-size:12px}
+
+    /* Sectors */
+    .sector-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+    .sector{display:grid;grid-template-columns:36px 1fr;gap:10px}
+    .sector h3{margin:0 0 4px}
+
+    /* API layout */
+    .api-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px}
+    @media (max-width: 880px){.api-grid{grid-template-columns:1fr}}
+    .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:13px;background:#f7f9fc;border:1px solid var(--border);border-radius:10px;padding:10px;overflow:auto}
+
+    footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted)}
+
+    @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+    @media print{header,.cta{display:none!important} .card,.kpi{box-shadow:none!important}}
+  </style>
+</head>
+<body>
+  <header aria-label="Primary">
+    <div class="container">
+      <nav aria-label="Top Navigation">
+        <div class="brand"><span class="logo" aria-hidden="true"></span><span>NepCast</span><span class="muted" aria-label="Nepali label">· मौसम सेवा</span></div>
+        <div class="nav-links" role="navigation">
+          <a href="#forecast">Forecast</a>
+          <a href="#alerts">Alerts</a>
+          <a href="#sectors">Sectors</a>
+          <a href="#api">API</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero" aria-label="Hero">
+      <div class="container">
+        <h1>NepCast — Hyperlocal Weather Services for Nepal</h1>
+        <p class="strap">Fine‑grained forecasts, early warnings, and sector‑specific advisories for Nepal’s diverse terrain — built for farmers, responders, trekkers, and citizens, with efficiency for resource‑constrained environments.</p>
+        <div class="cta">
+          <a href="#forecast" class="btn primary">View Forecast</a>
+          <a href="#api" class="btn secondary">API Docs</a>
+          <a href="#about" class="btn">Learn More</a>
+        </div>
+        <div class="kpis" aria-label="Key service indicators">
+          <div class="kpi"><div class="n">77</div><div class="l">Districts covered</div></div>
+          <div class="kpi"><div class="n">1–3 km</div><div class="l">Target resolution*</div></div>
+          <div class="kpi"><div class="l" style="grid-column:1/-1">*Prototype · pending calibration</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section id="alerts" class="section" aria-label="Severe weather alerts">
+      <div class="container">
+        <div class="hd-ln">
+          <h2>Severe Weather & Early Warnings</h2>
+          <span class="muted">Sample content · Integrate DHM/IMD feeds in production</span>
+        </div>
+        <details class="alert card">
+          <summary>
+            <strong>No active warnings</strong>
+            <div class="muted">Alerts will list affected districts, time windows, and recommended actions.</div>
+          </summary>
+          <div class="inner">
+            <p style="margin-top:8px">Example types: Heavy Rainfall, Landslide Risk, Riverine Flood, Thunderstorm/Hail, Heat/Cold Wave.</p>
+            <ul>
+              <li>Each alert includes bilingual guidance (नेपाली/English) and channel options (app, SMS/IVR, radio).</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- FORECAST -->
+    <section id="forecast" class="section" aria-label="Forecast section">
+      <div class="container">
+        <div class="hd-ln">
+          <h2>City/District Forecast Snapshot</h2>
+          <span class="muted">Placeholders (inactive) — wire to live data later</span>
+        </div>
+        <div class="wx-grid">
+          <article class="card wx-card" aria-label="Kathmandu forecast">
+            <div class="bd">
+              <div class="city"><h3>Kathmandu</h3><span class="muted">Today · 09:00</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                <div>
+                  <div class="temp">24°</div>
+                  <div class="muted">Feels 26° · Hum 78%</div>
+                </div>
+                <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="28" cy="24" r="12" fill="#e9eef5"/><rect x="16" y="40" width="4" height="12" rx="2" fill="#0b6bd3"/><rect x="28" y="42" width="4" height="12" rx="2" fill="#0b6bd3"/><rect x="40" y="40" width="4" height="12" rx="2" fill="#0b6bd3"/></svg>
+              </div>
+              <div class="meta"><div class="m">Wind 6 km/h</div><div class="m">AQI 62</div><div class="m">Pcp 3 mm</div></div>
+            </div>
+          </article>
+
+          <article class="card wx-card" aria-label="Pokhara forecast">
+            <div class="bd">
+              <div class="city"><h3>Pokhara</h3><span class="muted">Today · 09:00</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                <div>
+                  <div class="temp">22°</div>
+                  <div class="muted">Feels 23° · Hum 88%</div>
+                </div>
+                <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="26" r="12" fill="#e9eef5"/></svg>
+              </div>
+              <div class="meta"><div class="m">Wind 4 km/h</div><div class="m">AQI 54</div><div class="m">Pcp 1 mm</div></div>
+            </div>
+          </article>
+
+          <article class="card wx-card" aria-label="Biratnagar forecast">
+            <div class="bd">
+              <div class="city"><h3>Biratnagar</h3><span class="muted">Today · 09:00</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                <div>
+                  <div class="temp">30°</div>
+                  <div class="muted">Feels 35° · Hum 70%</div>
+                </div>
+                <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="22" cy="22" r="10" fill="#ffd84d"/><circle cx="36" cy="26" r="12" fill="#e9eef5"/></svg>
+              </div>
+              <div class="meta"><div class="m">Wind 8 km/h</div><div class="m">AQI 88</div><div class="m">Pcp 0 mm</div></div>
+            </div>
+          </article>
+
+          <article class="card wx-card" aria-label="Nepalgunj forecast">
+            <div class="bd">
+              <div class="city"><h3>Nepalgunj</h3><span class="muted">Today · 09:00</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                <div>
+                  <div class="temp">29°</div>
+                  <div class="muted">Feels 33° · Hum 64%</div>
+                </div>
+                <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="12" fill="#ffd3b8"/></svg>
+              </div>
+              <div class="meta"><div class="m">Wind 10 km/h</div><div class="m">AQI 95</div><div class="m">Pcp 0 mm</div></div>
+            </div>
+          </article>
+
+          <article class="card wx-card" aria-label="Dhangadhi forecast">
+            <div class="bd">
+              <div class="city"><h3>Dhangadhi</h3><span class="muted">Today · 09:00</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                <div>
+                  <div class="temp">27°</div>
+                  <div class="muted">Feels 29° · Hum 75%</div>
+                </div>
+                <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="34" cy="28" r="12" fill="#e9eef5"/></svg>
+              </div>
+              <div class="meta"><div class="m">Wind 7 km/h</div><div class="m">AQI 72</div><div class="m">Pcp 2 mm</div></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTORS -->
+    <section id="sectors" class="section" aria-label="Sector advisories">
+      <div class="container">
+        <div class="hd-ln">
+          <h2>Sector Advisories</h2>
+          <span class="muted">Actionable guidance</span>
+        </div>
+        <div class="sector-grid">
+          <article class="card bd sector" aria-label="Agriculture advisory"><div aria-hidden="true">🌾</div><div><h3>Agriculture</h3><p class="muted">ET₀ and rainfall guidance for irrigation scheduling, sowing/harvest timing, and pest windows.</p></div></article>
+          <article class="card bd sector" aria-label="DRR advisory"><div aria-hidden="true">🧭</div><div><h3>Disaster Risk Reduction</h3><p class="muted">Impact‑based nowcasts for landslide/flood with exposure overlays and thresholds.</p></div></article>
+          <article class="card bd sector" aria-label="Urban/AQI advisory"><div aria-hidden="true">🏙️</div><div><h3>Urban & Air Quality</h3><p class="muted">Heat‑island analytics, AQI forecasts, and construction safety advisories.</p></div></article>
+          <article class="card bd sector" aria-label="Hydrology advisory"><div aria-hidden="true">🌊</div><div><h3>Hydrology</h3><p class="muted">Runoff outlooks, river stage tendencies, and reservoir operation hints.</p></div></article>
+          <article class="card bd sector" aria-label="Aviation & Trekking advisory"><div aria-hidden="true">🛩️</div><div><h3>Aviation & Trekking</h3><p class="muted">Ceilings/visibility, wind corridors, and freezing level bands.</p></div></article>
+          <article class="card bd sector" aria-label="Public health advisory"><div aria-hidden="true">🩺</div><div><h3>Public Health</h3><p class="muted">Heat/cold advisories and smoke/dust nowcasts for respiratory risk.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- API DOCS (STATIC PREVIEW) -->
+    <section id="api" class="section" aria-label="Open API">
+      <div class="container">
+        <div class="hd-ln">
+          <h2>NepCast API (Preview)</h2>
+          <span class="muted">Stable JSON · Rate‑limited · Open for research/civic use</span>
+        </div>
+        <div class="api-grid">
+          <div class="card bd">
+            <h3 style="margin-top:0">Endpoints</h3>
+            <div class="code">GET /api/v1/forecast?lat=&lt;float&gt;&amp;lon=&lt;float&gt;&amp;hours=48</div>
+            <div class="code" style="margin-top:8px">GET /api/v1/alerts?district=&lt;name&gt;</div>
+            <div class="code" style="margin-top:8px">GET /api/v1/airquality?city=&lt;name&gt;</div>
+            <p class="muted" style="margin-top:10px">Auth: <code>X-API-Key</code>. Responses gzip‑compressed. CORS for *.np.</p>
+          </div>
+          <div class="card bd">
+            <h3 style="margin-top:0">Data Ethics & Licensing</h3>
+            <ul>
+              <li>Attribution to sources; document uncertainty.</li>
+              <li>No personal data; consented coarse geolocation.</li>
+              <li>Derived products CC‑BY 4.0; raw feeds per source license.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT / METHODOLOGY -->
+    <section id="about" class="section" aria-label="About NepCast">
+      <div class="container">
+        <div class="hd-ln">
+          <h2>About & Methodology</h2>
+          <span class="muted">Transparent assumptions · Continuous validation</span>
+        </div>
+        <div class="api-grid">
+          <article class="card bd">
+            <h3 style="margin-top:0">Data Sources</h3>
+            <ul>
+              <li>DHM stations · river gauges · radar (where available)</li>
+              <li>Satellite: GPM/IMERG, MODIS, Sentinel‑5P</li>
+              <li>Global models: ECMWF, GFS — downscaled</li>
+            </ul>
+            <p class="muted">Community sensors (schools/municipalities) planned to fill valley/hill‑slope gaps.</p>
+          </article>
+          <article class="card bd">
+            <h3 style="margin-top:0">Modeling Approach</h3>
+            <ul>
+              <li>Numerical: WRF to 1–3 km over complex terrain</li>
+              <li>ML: bias‑correction & post‑processing (quantile mapping, RNN/GBM)</li>
+              <li>Hydro coupling: WRF‑Hydro / VIC for runoff & flood risk</li>
+            </ul>
+            <p class="muted">Skill scoring (MAE, CRPS) with spatial k‑fold validation; citizen feedback loop.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="section" aria-label="Contact">
+      <div class="container">
+        <div class="hd-ln">
+          <h2>Contact & Partnerships</h2>
+          <span class="muted">Collaborators welcome — academia, government, NGOs, industry</span>
+        </div>
+        <div class="api-grid">
+          <div class="card bd">
+            <h3 style="margin-top:0">Get in touch</h3>
+            <p>Email: <a href="mailto:nepcast@aatizghimire.com.np">nepcast@aatizghimire.com.np</a></p>
+            <p>GitHub: <a href="#">github.com/nepcast</a></p>
+            <p>Address: Kirtipur, Kathmandu, Nepal</p>
+          </div>
+          <div class="card bd">
+            <h3 style="margin-top:0">Acknowledgments</h3>
+            <p class="muted">We thank Nepal’s Department of Hydrology & Meteorology (DHM) and the South Asia met community. Prototype only; not sole source for life‑critical decisions.</p>
+            <p class="muted">© 2025 NepCast. Some rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p><strong>NepCast</strong> — Hyperlocal Weather for Nepal</p>
+      <p class="muted">Built with open standards. Optimized for low bandwidth. Accessible by design. Languages: English · नेपाली (coming soon)</p>
+    </div>
+  </footer>
+</body>
+</html>
